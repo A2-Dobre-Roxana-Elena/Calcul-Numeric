@@ -2,98 +2,103 @@ import numpy as np
 import math
 
 
-def citimBsiN():
-    f = open("b1.txt.txt", "r")
-    b = []
-    n = int(f.readline())
-    for linie in f:
-        b.append(float(linie))
-    f.close()
+def read_b_and_n():
+    with open("b5", "r") as file:
+        b = []
+        n = int(file.readline())
+        for line in file:
+            b.append(float(line))
     return b, n
 
 
-def citimMatriceRara():
-    f = open("a1.txt.txt", "r")
-    n = int(f.readline())
-    matriceRara = []
-    for i in range(n):
-        matriceRara.append([])
 
-    # facem parsarea
-    for linie in f.readlines():
-        if len(linie.split(',')) > 2:
-            linie = linie.strip('\n').replace(' ', '')
-            tupla = linie.split(',')
-            valoare = float(tupla[0])
-            i = int(tupla[1])
-            j = int(tupla[2])
+def read_sparse_matrix():
+    with open("a5", "r") as file:
+        n = int(file.readline())
+        sparse_matrix = [[] for _ in range(n)]
 
-            # aici verficam daca elementele de pe diagonala principala sunt nenule
-            if i == j and np.abs(valoare) < epsilon:
-                return exit(0)
+        for line in file.readlines():
+            if len(line.split(',')) > 2:
+                line = line.strip('\n').replace(' ', '')
+                values = line.split(',')
+                value = float(values[0])
+                row = int(values[1])
+                col = int(values[2])
 
-            # aici verificam daca avem duplicate, daca avem, elementele primesc suma duplicatelor
-            valoareExistenta = False
-            for x in matriceRara[i]:
-                if x[1] == j:
-                    x[0] += valoare
+                if row == col and abs(value) < epsilon:
+                    exit(0)
 
-            element = (valoare, j)
-            matriceRara[i].append(element)
-    f.close()
-    return matriceRara
+                found_duplicate = False
+                for element in sparse_matrix[row]:
+                    if element[1] == col:
+                        element[0] += value
+                        found_duplicate = True
+
+                if not found_duplicate:
+                    element = (value, col)
+                    sparse_matrix[row].append(element)
+
+    return sparse_matrix
 
 
-def GaussSeidel(_rare_matrix, _x, _b, eps):
+
+def gauss_seidel(sparse_matrix, x, b, epsilon):
+    iteration = 0
     while True:
-        suma = 0
-        for i in range(len(_x)):
-            # the sum of the products from line A and column matrix b
+        sum_squared_diff = 0
+        for i in range(len(x)):
             product_sum = 0
+            diagonal_value = None
 
-            for _tuple in _rare_matrix[i]:
-                # landed on a diagonal element
-                if i == _tuple[1]:
-                    diagonal_value = _tuple[0]
+            for element in sparse_matrix[i]:
+                if i == element[1]:
+                    diagonal_value = element[0]
                 else:
-                    product_sum += _tuple[0] * _x[_tuple[1]]
+                    product_sum += element[0] * x[element[1]]
 
-            #aici e vechiul element!!!
-            #conform formulei, enoul element minus  vechiul element  !!!
-            suma += (float((_b[i] - product_sum) / diagonal_value) - _x[i]) * (
-                    float((_b[i] - product_sum) / diagonal_value) - _x[i])
+            if diagonal_value is None:
+                print("Elementele de pe diagonala principala sunt nule.")
+                exit(0)
 
-            #updatam vectorul x
-            _x[i] = float((_b[i] - product_sum) / diagonal_value)
+            old_x = x[i]
+            x[i] = (b[i] - product_sum) / diagonal_value
+            sum_squared_diff += (x[i] - old_x) ** 2
 
-        #norma e calculata ca radical din patratul fiecarui element, conform formulei
-        norm = math.sqrt(suma)
-        #ultima verificare
-        if norm < eps:
-            return _x
+        norm = math.sqrt(sum_squared_diff)
+        iteration += 1
+
+        if norm < epsilon:
+            print("Numarul de iteratii:", iteration)
+            return x
+
+        if norm > pow(10, 8):
+            print("Divergenta")
+            exit(1)
 
 
-def norma_infinita(A, x, b):
-    #norma = cea mai mare valoarea absoluta a elementelor
-    max = 0
+
+
+def infinity_norm(A, x, b):
+    # Norma = cea mai mare valoare absolută a elementelor
+    max_value = 0
     for i in range(len(A)):
-        sum = 0
-        for tuple in A[i]:
-            #aici e inmultirea intre matrici si vector
-            sum += tuple[0] * x[tuple[1]]
-        if abs(sum - b[i]) > max: #asta se cere, a*x - b
-            max = abs(sum - b[i])
-    return max
+        sum_product = 0
+        for element in A[i]:
+            sum_product += element[0] * x[element[1]]
+        diff = abs(sum_product - b[i])
+        if diff > max_value:
+            max_value = diff
+    return max_value
+
 
 
 if __name__ == '__main__':
-    # ex1
     epsilon = pow(10, -8)
-    b, n = citimBsiN()
-    matriceRara = citimMatriceRara()
-    # ex2
+    b, n = read_b_and_n()
+    sparse_matrix = read_sparse_matrix()
+
     x = np.zeros(n)
-    x = GaussSeidel(matriceRara, x, b, epsilon)
+    x = gauss_seidel(sparse_matrix, x, b, epsilon)
     print(x)
 
-    print("A*x_GS - b = ", norma_infinita(matriceRara, x, b))
+    print("A*x_GS - b = ", infinity_norm(sparse_matrix, x, b))
