@@ -88,7 +88,7 @@ def metodaLuiLaguerre(listaCoeficienti, R, kMax):
 if __name__ == '__main__':
     # polinom, listaCoeficienti = citireaPolinomului()
     # print(polinom(1))
-    listaCoeficienti = [1.0, -6.0, 13.0, -12.0, 4.0]
+    listaCoeficienti = [-2,1,2,0,1]
 
     R = (abs(listaCoeficienti[0]) + max(listaCoeficienti)) / abs(listaCoeficienti[0])
     print("Radacinele se afla in intervalul: [", -R, ",", R, "]")
